@@ -2111,8 +2111,6 @@ public:
   Server &WebSocket(const std::string &pattern, WebSocketHandler handler,
                     SubProtocolSelector sub_protocol_selector);
 
-  bool set_base_dir(const std::string &dir,
-                    const std::string &mount_point = std::string());
   bool set_mount_point(const std::string &mount_point, const std::string &dir,
                        Headers headers = Headers());
   bool remove_mount_point(const std::string &mount_point);
@@ -12451,11 +12449,6 @@ inline Server &Server::WebSocket(const std::string &pattern,
   return *this;
 }
 
-inline bool Server::set_base_dir(const std::string &dir,
-                                 const std::string &mount_point) {
-  return set_mount_point(mount_point, dir);
-}
-
 inline bool Server::set_mount_point(const std::string &mount_point,
                                     const std::string &dir, Headers headers) {
   detail::FileStat stat(dir);
@@ -18868,8 +18861,6 @@ inline const char *get_sni(const_session_t session) {
   return SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
 }
 
-inline uint64_t peek_error() { return ERR_peek_last_error(); }
-
 inline uint64_t get_error() { return ERR_get_error(); }
 
 inline std::string error_string(uint64_t code) {
@@ -20268,11 +20259,6 @@ inline const char *get_sni(const_session_t session) {
   return nullptr;
 }
 
-inline uint64_t peek_error() {
-  // Mbed TLS doesn't have an error queue, return the last error
-  return static_cast<uint64_t>(-impl::mbedtls_last_error());
-}
-
 inline uint64_t get_error() {
   // Mbed TLS doesn't have an error queue, return and clear the last error
   uint64_t err = static_cast<uint64_t>(-impl::mbedtls_last_error());
@@ -21618,13 +21604,6 @@ inline bool set_verify_callback(ctx_t ctx, VerifyCallback callback) {
         nullptr);
   }
   return true;
-}
-
-inline long get_verify_error(const_session_t session) {
-  if (!session) { return -1; }
-  auto *wsession =
-      static_cast<impl::WolfSSLSession *>(const_cast<void *>(session));
-  return wolfSSL_get_verify_result(wsession->ssl);
 }
 
 inline std::string verify_error_string(long error_code) {
