@@ -17,7 +17,7 @@ using namespace std;
 
 string dump_headers(const Headers &headers) {
   string s;
-  char buf[BUFSIZ];
+  std::string buf;
 
   for (const auto &x : headers) {
     snprintf(buf, sizeof(buf), "%s: %s\n", x.first.c_str(), x.second.c_str());
@@ -29,7 +29,7 @@ string dump_headers(const Headers &headers) {
 
 string dump_multipart_formdata(const MultipartFormData &form) {
   string s;
-  char buf[BUFSIZ];
+  std::string buf;
 
   s += "--------------------------------\n";
 
@@ -70,7 +70,7 @@ string dump_multipart_formdata(const MultipartFormData &form) {
 
 string log(const Request &req, const Response &res) {
   string s;
-  char buf[BUFSIZ];
+  std::string buf;
 
   s += "================================\n";
 
@@ -121,7 +121,7 @@ int main(int argc, const char **argv) {
 
   svr.set_error_handler([](const Request & /*req*/, Response &res) {
     const char *fmt = "<p>Error Status: <span style='color:red;'>%d</span></p>";
-    char buf[BUFSIZ];
+    std::string buf;
     snprintf(buf, sizeof(buf), fmt, res.status);
     res.set_content(buf, "text/html");
   });
