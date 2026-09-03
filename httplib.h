@@ -1503,7 +1503,7 @@ make_file_provider(const std::string &name, const std::string &filepath,
         return true;
       }
     }
-    char buf[8192];
+    std::vector<char> buf(8192);
     f.read(buf, sizeof(buf));
     auto n = static_cast<size_t>(f.gcount());
     if (n > 0) { return sink.write(buf, n); }
@@ -1528,7 +1528,7 @@ make_file_body(const std::string &filepath) {
     if (!f) { return false; }
     f.seekg(static_cast<std::streamoff>(offset));
     if (!f.good()) { return false; }
-    char buf[8192];
+    std::vector<char> buf(8192);
     while (length > 0) {
       auto to_read = (std::min)(sizeof(buf), length);
       f.read(buf, static_cast<std::streamsize>(to_read));
