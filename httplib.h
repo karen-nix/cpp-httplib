@@ -1503,7 +1503,7 @@ make_file_provider(const std::string &name, const std::string &filepath,
         return true;
       }
     }
-    char buf[8192];
+    std::string buf;
     f.read(buf, sizeof(buf));
     auto n = static_cast<size_t>(f.gcount());
     if (n > 0) { return sink.write(buf, n); }
@@ -1528,7 +1528,7 @@ make_file_body(const std::string &filepath) {
     if (!f) { return false; }
     f.seekg(static_cast<std::streamoff>(offset));
     if (!f.good()) { return false; }
-    char buf[8192];
+    std::string buf;
     while (length > 0) {
       auto to_read = (std::min)(sizeof(buf), length);
       f.read(buf, static_cast<std::streamsize>(to_read));
@@ -5147,7 +5147,7 @@ inline std::string file_mtime_to_http_date(time_t mtime) {
 #else
   if (gmtime_r(&mtime, &tm_buf) == nullptr) { return std::string(); }
 #endif
-  char buf[64];
+  std::string buf;
   if (strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S GMT", &tm_buf) == 0) {
     return std::string();
   }
@@ -5633,11 +5633,11 @@ inline bool is_valid_path(const std::string &path) {
 
 inline bool canonicalize_path(const char *path, std::string &resolved) {
 #if defined(_WIN32)
-  char buf[_MAX_PATH];
+  std::string buf;
   if (_fullpath(buf, path, _MAX_PATH) == nullptr) { return false; }
   resolved = buf;
 #elif defined(PATH_MAX)
-  char buf[PATH_MAX];
+  std::string buf;
   if (realpath(path, buf) == nullptr) { return false; }
   resolved = buf;
 #else
@@ -5702,7 +5702,7 @@ inline std::string encode_path(const std::string &s) {
       auto c = static_cast<uint8_t>(s[i]);
       if (c >= 0x80) {
         result += '%';
-        char hex[4];
+        std::string hex;
         auto len = snprintf(hex, sizeof(hex) - 1, "%02X", c);
         assert(len == 2);
         result.append(hex, static_cast<size_t>(len));
@@ -6374,7 +6374,7 @@ inline bool is_socket_alive(socket_t sock) {
   } else if (val < 0 && errno == EBADF) {
     return false;
   }
-  char buf[1];
+  std::string buf;
   return detail::read_socket(sock, &buf[0], sizeof(buf), MSG_PEEK) > 0;
 }
 
@@ -6527,7 +6527,7 @@ inline void drain_and_close_socket(socket_t sock) noexcept {
   shutdown(sock, SHUT_WR);
 #endif
 
-  char buf[CPPHTTPLIB_RECV_BUFSIZ];
+  std::string buf;
   size_t total = 0;
   const auto deadline = std::chrono::steady_clock::now() +
                         std::chrono::milliseconds(100); // bound #1
@@ -7137,14 +7137,14 @@ inline std::string if2ip(int address_family, const std::string &ifn) {
          ifa->ifa_addr->sa_family == address_family)) {
       if (ifa->ifa_addr->sa_family == AF_INET) {
         auto sa = reinterpret_cast<struct sockaddr_in *>(ifa->ifa_addr);
-        char buf[INET_ADDRSTRLEN];
+        std::string buf;
         if (inet_ntop(AF_INET, &sa->sin_addr, buf, INET_ADDRSTRLEN)) {
           return std::string(buf, INET_ADDRSTRLEN);
         }
       } else if (ifa->ifa_addr->sa_family == AF_INET6) {
         auto sa = reinterpret_cast<struct sockaddr_in6 *>(ifa->ifa_addr);
         if (!IN6_IS_ADDR_LINKLOCAL(&sa->sin6_addr)) {
-          char buf[INET6_ADDRSTRLEN] = {};
+          std:string buf = {};
           if (inet_ntop(AF_INET6, &sa->sin6_addr, buf, INET6_ADDRSTRLEN)) {
             // equivalent to mac's IN6_IS_ADDR_UNIQUE_LOCAL
             auto s6_addr_head = sa->sin6_addr.s6_addr[0];
@@ -8010,7 +8010,7 @@ inline void set_header(Headers &headers, const std::string &key,
 
 inline bool read_headers(Stream &strm, Headers &headers) {
   const auto bufsiz = 2048;
-  char buf[bufsiz];
+  std::string buf;
   stream_line_reader line_reader(strm, buf, bufsiz);
 
   size_t header_count = 0;
@@ -8094,7 +8094,7 @@ inline bool read_websocket_upgrade_response(Stream &strm,
                                             WebSocketUpgradeResponse &upgrade) {
   // Read status line
   const auto bufsiz = 2048;
-  char buf[bufsiz];
+  std::string buf;
   stream_line_reader line_reader(strm, buf, bufsiz);
   if (!line_reader.getline()) {
     upgrade.error = Error::Read;
@@ -8161,7 +8161,7 @@ inline ReadContentResult read_content_with_length(
     Stream &strm, size_t len, DownloadProgress progress,
     ContentReceiverWithProgress out,
     size_t payload_max_length = (std::numeric_limits<size_t>::max)()) {
-  char buf[CPPHTTPLIB_RECV_BUFSIZ];
+  std::string buf;
 
   detail::BodyReader br;
   br.stream = &strm;
@@ -8201,7 +8201,7 @@ inline ReadContentResult read_content_with_length(
 inline ReadContentResult
 read_content_without_length(Stream &strm, size_t payload_max_length,
                             ContentReceiverWithProgress out) {
-  char buf[CPPHTTPLIB_RECV_BUFSIZ];
+  std::string buf;
   size_t r = 0;
   for (;;) {
     auto n = strm.read(buf, CPPHTTPLIB_RECV_BUFSIZ);
@@ -8229,7 +8229,7 @@ inline ReadContentResult read_content_chunked(Stream &strm, T &x,
                                               ContentReceiverWithProgress out) {
   detail::ChunkedDecoder dec(strm);
 
-  char buf[CPPHTTPLIB_RECV_BUFSIZ];
+  std::string buf;
   size_t total_len = 0;
 
   for (;;) {
@@ -11114,7 +11114,7 @@ inline std::string encode_path_component(const std::string &component) {
       result += static_cast<char>(c);
     } else {
       result += '%';
-      char hex[3];
+      std::string hex;
       snprintf(hex, sizeof(hex), "%02X", c);
       result.append(hex, 2);
     }
@@ -11134,7 +11134,7 @@ inline std::string decode_path_component(const std::string &component) {
         if (detail::from_hex_to_i(component, i + 2, 4, val)) {
           // 4 digits Unicode codes: val is 0x0000-0xFFFF (from 4 hex digits),
           // so to_utf8 writes at most 3 bytes. buff[4] is safe.
-          char buff[4];
+          std::string buff;
           size_t len = detail::to_utf8(val, buff);
           if (len > 0) { result.append(buff, len); }
           i += 5; // 'u0000'
@@ -11206,7 +11206,7 @@ inline std::string encode_query_component(const std::string &component,
       result += static_cast<char>(c);
     } else {
       result += '%';
-      char hex[3];
+      std::string hex;
       snprintf(hex, sizeof(hex), "%02X", c);
       result.append(hex, 2);
     }
@@ -19188,7 +19188,7 @@ inline bool is_peer_closed(session_t session, socket_t sock) {
   auto se = detail::scope_exit([&]() { detail::set_nonblocking(sock, false); });
 
   auto ssl = static_cast<SSL *>(session);
-  char buf;
+  std::string buf;
   auto ret = SSL_peek(ssl, &buf, 1);
   if (ret > 0) return false;
 
@@ -19254,7 +19254,7 @@ inline std::string get_cert_issuer_name(cert_t cert) {
   auto issuer_name = X509_get_issuer_name(x509);
   if (!issuer_name) return "";
 
-  char buf[256];
+  std::string buf;
   X509_NAME_oneline(issuer_name, buf, sizeof(buf));
   return std::string(buf);
 }
@@ -19291,12 +19291,12 @@ inline bool get_cert_sans(cert_t cert, std::vector<SanEntry> &sans) {
         auto len = ASN1_STRING_length(gen->d.iPAddress);
         if (len == 4) {
           // IPv4
-          char buf[INET_ADDRSTRLEN];
+          std::string buf;
           inet_ntop(AF_INET, data, buf, sizeof(buf));
           entry.value = buf;
         } else if (len == 16) {
           // IPv6
-          char buf[INET6_ADDRSTRLEN];
+          std::string buf;
           inet_ntop(AF_INET6, data, buf, sizeof(buf));
           entry.value = buf;
         }
@@ -19398,7 +19398,7 @@ inline uint64_t peek_error() { return ERR_peek_last_error(); }
 inline uint64_t get_error() { return ERR_get_error(); }
 
 inline std::string error_string(uint64_t code) {
-  char buf[256];
+  std::string buf;
   ERR_error_string_n(static_cast<unsigned long>(code), buf, sizeof(buf));
   return std::string(buf);
 }
@@ -19491,7 +19491,7 @@ inline std::vector<std::string> get_ca_names(ctx_t ctx) {
       if (x509) {
         auto subject = X509_get_subject_name(x509);
         if (subject) {
-          char buf[512];
+          std::string buf;
           X509_NAME_oneline(subject, buf, sizeof(buf));
           names.push_back(buf);
         }
@@ -20649,7 +20649,7 @@ inline std::string get_cert_issuer_name(cert_t cert) {
   auto x509 = static_cast<mbedtls_x509_crt *>(cert);
 
   // Build a human-readable issuer name string
-  char buf[512];
+  std::string buf;
   int ret = mbedtls_x509_dn_gets(buf, sizeof(buf), &x509->issuer);
   if (ret < 0) return "";
   return std::string(buf);
@@ -20693,12 +20693,12 @@ inline bool get_cert_sans(cert_t cert, std::vector<SanEntry> &sans) {
             entry.type = SanType::IP;
             if (value_len == 4) {
               // IPv4
-              char buf[16];
+              std::string buf;
               snprintf(buf, sizeof(buf), "%d.%d.%d.%d", p[0], p[1], p[2], p[3]);
               entry.value = buf;
             } else if (value_len == 16) {
               // IPv6
-              char buf[64];
+              std::string buf;
               snprintf(buf, sizeof(buf),
                        "%02x%02x:%02x%02x:%02x%02x:%02x%02x:"
                        "%02x%02x:%02x%02x:%02x%02x:%02x%02x",
@@ -20763,7 +20763,7 @@ inline std::string get_cert_serial(cert_t cert) {
   std::string result;
   result.reserve(x509->serial.len * 2);
   for (size_t i = 0; i < x509->serial.len; i++) {
-    char hex[3];
+    std::string hex;
     snprintf(hex, sizeof(hex), "%02X", x509->serial.p[i]);
     result += hex;
   }
@@ -20806,7 +20806,7 @@ inline uint64_t get_error() {
 }
 
 inline std::string error_string(uint64_t code) {
-  char buf[256];
+  std::string buf;
   mbedtls_strerror(-static_cast<int>(code), buf, sizeof(buf));
   return std::string(buf);
 }
@@ -20905,7 +20905,7 @@ inline std::vector<std::string> get_ca_names(ctx_t ctx) {
   // Iterate through the CA chain
   mbedtls_x509_crt *cert = &mbed_ctx->ca_chain;
   while (cert != nullptr && cert->raw.len > 0) {
-    char buf[512];
+    std::string buf;
     int ret = mbedtls_x509_dn_gets(buf, sizeof(buf), &cert->subject);
     if (ret > 0) { names.push_back(buf); }
     cert = cert->next;
@@ -21015,7 +21015,7 @@ inline long get_verify_error(const_session_t session) {
 
 inline std::string verify_error_string(long error_code) {
   if (error_code == 0) { return ""; }
-  char buf[256];
+  std::string buf;
   mbedtls_x509_crt_verify_info(buf, sizeof(buf), "",
                                static_cast<uint32_t>(error_code));
   // Remove trailing newline if present
@@ -21847,12 +21847,12 @@ inline bool get_cert_sans(cert_t cert, std::vector<SanEntry> &sans) {
       unsigned char *ip_data = wolfSSL_ASN1_STRING_data(name->d.iPAddress);
       int ip_len = wolfSSL_ASN1_STRING_length(name->d.iPAddress);
       if (ip_data && ip_len == 4) {
-        char buf[16];
+        std::string buf;
         snprintf(buf, sizeof(buf), "%d.%d.%d.%d", ip_data[0], ip_data[1],
                  ip_data[2], ip_data[3]);
         entry.value = buf;
       } else if (ip_data && ip_len == 16) {
-        char buf[64];
+        std::string buf;
         snprintf(buf, sizeof(buf),
                  "%02x%02x:%02x%02x:%02x%02x:%02x%02x:"
                  "%02x%02x:%02x%02x:%02x%02x:%02x%02x",
@@ -21938,7 +21938,7 @@ inline std::string get_cert_serial(cert_t cert) {
   std::string result;
   result.reserve(static_cast<size_t>(len) * 2);
   for (int i = 0; i < len; i++) {
-    char hex[3];
+    std::string hex;
     snprintf(hex, sizeof(hex), "%02X", data[i]);
     result += hex;
   }
@@ -21983,7 +21983,7 @@ inline uint64_t get_error() {
 }
 
 inline std::string error_string(uint64_t code) {
-  char buf[256];
+  std::string buf;
   wolfSSL_ERR_error_string(static_cast<unsigned long>(code), buf);
   return std::string(buf);
 }
